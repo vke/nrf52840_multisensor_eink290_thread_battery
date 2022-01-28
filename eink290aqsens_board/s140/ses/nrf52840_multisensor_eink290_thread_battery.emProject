@@ -1,5 +1,8 @@
 <!DOCTYPE CrossStudio_Project_File>
-<solution Name="nrf52840_multisensor_eink290_thread_battery" target="8" version="2">
+<solution
+  Name="nrf52840_multisensor_eink290_thread_battery"
+  target="8"
+  version="2">
   <project Name="nrf52840_multisensor_eink290_thread_battery">
     <configuration
       Name="Common"
@@ -102,6 +105,25 @@
       <file file_name="../../../thread_utils.c" />
       <file file_name="../../../thread_utils.h" />
       <file file_name="../../../settings.h" />
+      <folder Name="drivers">
+        <folder Name="bme280">
+          <folder Name="bosch_bme280_driver">
+            <file file_name="../../../drivers/bme280/bosch_bme280_driver/bme280.c" />
+            <file file_name="../../../drivers/bme280/bosch_bme280_driver/bme280.h" />
+            <file file_name="../../../drivers/bme280/bosch_bme280_driver/bme280_defs.h" />
+          </folder>
+          <file file_name="../../../drivers/bme280/bme280nrf52.c" />
+          <file file_name="../../../drivers/bme280/bme280nrf52.h" />
+        </folder>
+        <folder Name="max44009">
+          <file file_name="../../../drivers/max44009/max44009.c" />
+          <file file_name="../../../drivers/max44009/max44009.h" />
+        </folder>
+        <folder Name="sgp40">
+          <file file_name="../../../drivers/sgp40/sgp40.c" />
+          <file file_name="../../../drivers/sgp40/sgp40.h" />
+        </folder>
+      </folder>
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="$(PATH_TO_SDK)/external/segger_rtt/SEGGER_RTT.c" />
@@ -136,11 +158,6 @@
       <file file_name="../../../tinycbor/cborparser.c" />
       <file file_name="../../../tinycbor/compilersupport_p.h" />
       <file file_name="../../../tinycbor/tinycbor-version.h" />
-    </folder>
-    <folder Name="bme280">
-      <file file_name="../../../bosch_bme280_driver/bme280.c" />
-      <file file_name="../../../bosch_bme280_driver/bme280.h" />
-      <file file_name="../../../bosch_bme280_driver/bme280_defs.h" />
     </folder>
   </project>
   <configuration

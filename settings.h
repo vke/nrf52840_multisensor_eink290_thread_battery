@@ -1,6 +1,8 @@
 #ifndef __SETTINGS__H__
 #define __SETTINGS__H__
 
+#include "drivers/bme280/bosch_bme280_driver/bme280.h"
+
 #define INFO_FIRMWARE_TYPE                   "multisensor_eink290b"
 #define INFO_FIRMWARE_VERSION                "1.0.0"
 
@@ -25,6 +27,10 @@
 
 #define TWI_SCL_M                            3
 #define TWI_SDA_M                            28
+
+#define MAX44009_SENSOR_I2C_ADDR             0x4A
+#define SGP40_SENSOR_I2C_ADDR                0x59
+#define BME280_SENSOR_I2C_ADDR               BME280_I2C_ADDR_SEC
 
 #define DISABLE_OT_ROLE_LIGHTS               1
 // #define DISABLE_OT_TRAFFIC_LIGHTS            1

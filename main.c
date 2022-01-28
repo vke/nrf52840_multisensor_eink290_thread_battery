@@ -50,16 +50,17 @@
 
 #include "nrf_drv_saadc.h"
 #include "nrf_temp.h"
-#include "nrf_delay.h"
 #include "nrf_drv_twi.h"
 #include "nrf_drv_power.h"
 
 #include "settings.h"
 
-#include "bosch_bme280_driver/bme280.h"
-
 #include "thread_coap_utils.h"
 #include "thread_utils.h"
+
+#include "drivers/max44009/max44009.h"
+#include "drivers/sgp40/sgp40.h"
+#include "drivers/bme280/bme280nrf52.h"
 
 #include <openthread/thread.h>
 
@@ -70,21 +71,9 @@
 
 static const nrf_drv_twi_t m_twi_master = NRF_DRV_TWI_INSTANCE(0);
 
-uint32_t bme280_measurement_delay = 0;
-struct bme280_dev bme280_sensor;
-uint8_t bme280_sensor_addr = BME280_I2C_ADDR_SEC;//BME280_I2C_ADDR_PRIM;
-uint8_t max44009_sensor_addr = 0x4A; // or 0x4B if A0 pin connected to Vcc
-uint8_t sgp40_sensor_addr = 0x59;
-
-int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr);
-static void sgp40_measurement_delay_timeout_handler(void *p_context);
-static bool sgp40_measure_raw_signal();
-
 APP_TIMER_DEF(m_voltage_timer_id);
 APP_TIMER_DEF(m_internal_temperature_timer_id);
 APP_TIMER_DEF(m_sensors_timer_id);
-APP_TIMER_DEF(m_bme280_measurement_delay_timer_id);
-APP_TIMER_DEF(m_sgp40_measurement_delay_timer_id);
 
 sensor_subscription sensor_subscriptions[] = {
 	{ .sensor_name = 'P', .sent_value = 0, .current_value = 0, .reportable_change = 0, .disable_reporting = true, .read_only = true, .initialized = false, .report_interval = 10000, .last_sent_at = 0, .set_value_handler = NULL, },
@@ -196,44 +185,11 @@ static void internal_temperature_timeout_handler(void *p_context)
 	}
 }
 
-static void bme280_measurement_delay_timeout_handler(void *p_context)
-{
-	UNUSED_PARAMETER(p_context);
-
-	struct bme280_data comp_data;
-
-	int8_t rslt = bme280_get_sensor_data(BME280_ALL, &comp_data, &bme280_sensor);
-	if (rslt == BME280_OK) {
-		set_sensor_value('P', comp_data.pressure, false);
-		set_sensor_value('T', comp_data.temperature, false);
-		set_sensor_value('H', comp_data.humidity, false);
-	}
-
-	uint8_t data[2];
-	uint8_t i2c_result1 = user_i2c_read(0x03, data, 1, &max44009_sensor_addr);
-	uint8_t i2c_result2 = user_i2c_read(0x04, data + 1, 1, &max44009_sensor_addr);
-	if (!i2c_result1 && !i2c_result2) {
-		uint8_t exponent = (data[0] >> 4) & 0x0F;
-		uint32_t mantissa = ((data[0] & 0x0F) << 4) + (data[1] & 0x0F);
-		uint32_t lux = 0x3FC000; // max sensor value - 188K
-		if (exponent != 15)
-			lux = mantissa << exponent;
-		set_sensor_value('l', lux, false);
-	}
-
-	sgp40_measure_raw_signal();
-}
-
 static void sensors_timeout_handler(void *p_context)
 {
 	UNUSED_PARAMETER(p_context);
 
-	int8_t rslt = bme280_set_sensor_mode(BME280_FORCED_MODE, &bme280_sensor);
-	if (rslt != BME280_OK)
-		return;
-
-	ret_code_t err_code = app_timer_start(m_bme280_measurement_delay_timer_id, APP_TIMER_TICKS(bme280_measurement_delay + 10), NULL);
-	APP_ERROR_CHECK(err_code);
+	bme280_start_measurement(); // measurements of other sensors will be called by the bme280 result handler 
 }
 
 static void bsp_event_handler(bsp_event_t event)
@@ -318,16 +274,8 @@ static void timer_init(void)
 	error_code = app_timer_create(&m_internal_temperature_timer_id, APP_TIMER_MODE_REPEATED, internal_temperature_timeout_handler);
 	APP_ERROR_CHECK(error_code);
 
-	// sensors timer
+	// Sensors timer
 	error_code = app_timer_create(&m_sensors_timer_id, APP_TIMER_MODE_REPEATED, sensors_timeout_handler);
-	APP_ERROR_CHECK(error_code);
-
-	// bme280 measurement delay timer
-	error_code = app_timer_create(&m_bme280_measurement_delay_timer_id, APP_TIMER_MODE_SINGLE_SHOT, bme280_measurement_delay_timeout_handler);
-	APP_ERROR_CHECK(error_code);
-
-	// sgp40 measurement delay timer
-	error_code = app_timer_create(&m_sgp40_measurement_delay_timer_id, APP_TIMER_MODE_SINGLE_SHOT, sgp40_measurement_delay_timeout_handler);
 	APP_ERROR_CHECK(error_code);
 }
 
@@ -344,138 +292,6 @@ static void thread_instance_init(void)
 
 	thread_init(&thread_configuration);
 	thread_state_changed_callback_set(thread_state_changed_callback);
-}
-
-void user_delay_us(uint32_t period, void *intf_ptr)
-{
-	nrf_delay_us(period);
-}
-
-int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
-{
-	ret_code_t err_code = nrf_drv_twi_tx(&m_twi_master, *(uint8_t *)intf_ptr, &reg_addr, 1, false);
-	
-	APP_ERROR_CHECK(err_code);
-	
-	err_code = nrf_drv_twi_rx(&m_twi_master, *(uint8_t *)intf_ptr, reg_data, len);
-	
-	APP_ERROR_CHECK(err_code);
-	
-	return err_code;
-}
-
-int8_t user_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
-{
-	uint8_t write_data[256];
-
-	if (len > sizeof(write_data) - 1)
-		return 1;
-
-	write_data[0] = reg_addr;
-
-	memcpy(&write_data[1], reg_data, len);
-
-	ret_code_t err_code = nrf_drv_twi_tx(&m_twi_master, *(uint8_t *)intf_ptr, write_data, len + 1, false);
-
-	APP_ERROR_CHECK(err_code);
-
-	return 0;
-}
-
-static bool init_bme280()
-{
-	bme280_sensor.intf_ptr = &bme280_sensor_addr;
-	bme280_sensor.intf = BME280_I2C_INTF;
-	bme280_sensor.read = user_i2c_read;
-	bme280_sensor.write = user_i2c_write;
-	bme280_sensor.delay_us = user_delay_us;
-
-	int8_t rslt = bme280_init(&bme280_sensor);
-	if (rslt != BME280_OK)
-		return false;
-	
-	bme280_sensor.settings.osr_h = BME280_OVERSAMPLING_16X;
-	bme280_sensor.settings.osr_p = BME280_OVERSAMPLING_16X;
-	bme280_sensor.settings.osr_t = BME280_OVERSAMPLING_16X;
-	bme280_sensor.settings.filter = BME280_FILTER_COEFF_4;
-
-	uint8_t settings_sel = BME280_OSR_PRESS_SEL | BME280_OSR_TEMP_SEL | BME280_OSR_HUM_SEL | BME280_FILTER_SEL;
-
-	rslt = bme280_set_sensor_settings(settings_sel, &bme280_sensor);
-	if (rslt != BME280_OK)
-		return false;
-
-	bme280_measurement_delay = bme280_cal_meas_delay(&bme280_sensor.settings);
-
-	return rslt == BME280_OK;
-}
-
-static bool init_max44009()
-{
-	uint8_t regData = 0x80; // continious mode bit for configuration register
-	uint8_t i2c_result = user_i2c_write(0x02, &regData, 1, &max44009_sensor_addr);
-	return i2c_result == 0;
-}
-
-#define SGP40_CRC8_POLYNOMIAL 0x31
-#define SGP40_CRC8_INIT 0xFF
-
-uint8_t generateCRC(uint8_t *data, uint8_t datalen)
-{
-	uint8_t crc = SGP40_CRC8_INIT;
-
-	for (uint8_t i = 0; i < datalen; i++)
-	{
-		crc ^= data[i];
-		for (uint8_t b = 0; b < 8; b++)
-		{
-			if (crc & 0x80)
-				crc = (crc << 1) ^ SGP40_CRC8_POLYNOMIAL;
-			else
-				crc <<= 1;
-		}
-	}
-	return crc;
-}
-
-static bool sgp4x_turn_heater_off()
-{
-	uint8_t cmd[] = {0x36, 0x15};
-	
-	ret_code_t err_code = nrf_drv_twi_tx(&m_twi_master, *(uint8_t *)&sgp40_sensor_addr, cmd, 2, false);
-
-	return true;
-}
-
-static bool sgp40_measure_raw_signal()
-{
-	uint8_t cmd[] = {0x26, 0x0F, 0x80, 0x00, 0xA2, 0x66, 0x66, 0x93};
-	
-	ret_code_t err_code = nrf_drv_twi_tx(&m_twi_master, *(uint8_t *)&sgp40_sensor_addr, cmd, 8, false);
-	
-	err_code = app_timer_start(m_sgp40_measurement_delay_timer_id, APP_TIMER_TICKS(50), NULL);
-	APP_ERROR_CHECK(err_code);
-
-	return true;
-}
-
-static void sgp40_measurement_delay_timeout_handler(void *p_context)
-{
-	UNUSED_PARAMETER(p_context);
-
-	uint8_t result[3] = {0};
-	ret_code_t err_code = nrf_drv_twi_rx(&m_twi_master, *(uint8_t *)&sgp40_sensor_addr, result, 3);
-
-	uint16_t signal = result[0] * 256 + result[1];
-	
-	uint8_t crc = generateCRC(result, 2);
-	if (crc != result[2]) {
-		NRF_LOG_INFO("Time: %d, sgp40 invalid crc: 0x%02x, 0x%02x, 0x%02x", result[0], result[1], result[2]);
-	} else {
-		NRF_LOG_INFO("Time: %d, sgp40 raw data: 0x%08x, %d", otPlatAlarmMilliGetNow(), signal, signal);
-		if (signal > 15000 && signal < 55000)
-			set_sensor_value('S', signal, false);
-	}
 }
 
 static bool twi_init()
@@ -500,6 +316,45 @@ static bool twi_init()
 	return ret;
 }
 
+void bme280_results_handler(bme280_results_t* p_results)
+{
+	// no error?
+	if (p_results) {
+//		NRF_LOG_INFO("bme280: P: %d, T: %d, H: %d", p_results->pressure, p_results->temperature, p_results->humidity);
+		set_sensor_value('P', p_results->pressure, false);
+		set_sensor_value('T', p_results->temperature, false);
+		set_sensor_value('H', p_results->humidity, false);
+	} else {
+		NRF_LOG_INFO("bme280 sensor error");
+	}
+
+	max44009_start_measurement(); // measurements of other sensors will be called by the max44009 result handler 
+}
+
+void max44009_results_handler(max44009_results_t* p_results)
+{
+	// no error?
+	if (p_results) {
+//		NRF_LOG_INFO("max44009: l: %d", p_results->lux);
+		set_sensor_value('l', p_results->lux, false);
+	} else {
+		NRF_LOG_INFO("max44009 sensor error");
+	}
+
+	sgp40_measure_raw_signal();
+}
+
+void sgp40_results_handler(sgp40_results_t* p_results)
+{
+	// no error?
+	if (p_results) {
+//		NRF_LOG_INFO("sgp40: S: %d", p_results->sensor_raw_value);
+		set_sensor_value('S', p_results->sensor_raw_value, false);
+	} else {
+		NRF_LOG_INFO("sgp40 sensor error");
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	log_init();
@@ -508,8 +363,10 @@ int main(int argc, char * argv[])
 	adc_configure();
 	nrf_temp_init();
 	twi_init();
-	init_bme280();
-	init_max44009();
+
+	bme280_sensor_init(bme280_results_handler, &m_twi_master, BME280_SENSOR_I2C_ADDR);
+	max44009_sensor_init(max44009_results_handler, &m_twi_master, MAX44009_SENSOR_I2C_ADDR);
+	sgp40_sensor_init(sgp40_results_handler, &m_twi_master, SGP40_SENSOR_I2C_ADDR);
 
 	uint32_t error_code = NRF_SUCCESS;
 
@@ -525,7 +382,7 @@ int main(int argc, char * argv[])
 	//sgp4x_turn_heater_off();
 	//nrf_delay_ms(120000);
 	//NRF_LOG_INFO("sgp40: starting measurements");
-	
+
 	otPlatRadioSetTransmitPower(thread_ot_instance_get(), RADIO_TRANSMIT_POWER);
 	thread_coap_utils_init();
 
