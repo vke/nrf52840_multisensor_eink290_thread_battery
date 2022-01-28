@@ -1,0 +1,52 @@
+Left external (up to down):
+43, P0.10 = RX (debug)
+41, P0.09 = TX (debug)
+39, SWDCLK = SDKCLK (debug)
+37, SWDIO = SWDIO (debug)
+35, P0.24 = R13 => MODE button => GND
+33, P0.13 = BUSY_PIN (eink)
+31, D+ = NC
+29, D- = NC
+27, VBUS = NC
+26, P0.18 = RESET button => GND
+
+Left internal (up to down):
+42, P1.06 = NC
+40, P1.04 = NC
+38, P1.02 = NC
+36, P1.00 = NC
+34, P0.22 = CS_PIN (eink)
+32, P0.20 = SCK (eink)
+30, P0.17 = RST_PIN (eink)
+28, P0.15 = MOSI (eink)
+
+Bottom external (left to right):
+25, DCCH = NC
+23, VDDH = VDDH
+21, GND = GND
+19, VDD = VDD
+17, P1.09 = NC
+15, P0.05 = ???
+13, P0.01 = XTAL
+11, P0.00 = XTAL
+
+Bottom internal (left to right):
+24, GND = NC
+22, P0.07 = NC
+20, P0.12 = NC
+18, P0.04 = NC
+16, P0.08 = NC
+14, P0.06 = NC
+12, P0.26 = NC
+
+Right external (up to down):
+01, P1.11 = NC
+02, P1.10 = NC
+03, P0.03 = SCL (sensors)
+04, P0.28 = SDA (sensors)
+05, GND
+06, P1.13 = NC
+07, P0.02 = LED => GND
+08, P0.29 = MAX44009 INT
+09, P0.31 = DC_PIN (eink)
+10, P0.30 = BUZZER

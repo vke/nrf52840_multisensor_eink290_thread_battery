@@ -1,0 +1,5 @@
+*.code-workspace
+.vscode/*
+eink290aqsens_board/s140/ses/Output/*
+*.jlink
+*.emSession
