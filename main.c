@@ -324,6 +324,9 @@ void bme280_results_handler(bme280_results_t* p_results)
 		set_sensor_value('P', p_results->pressure, false);
 		set_sensor_value('T', p_results->temperature, false);
 		set_sensor_value('H', p_results->humidity, false);
+#ifndef DISABLE_SGP40_TEMP_HUM_COMPENSATION
+		sgp40_set_temp_hum_bme280(p_results->temperature, p_results->humidity);
+#endif // DISABLE_SGP40_TEMP_HUM_COMPENSATION
 	} else {
 		NRF_LOG_INFO("bme280 sensor error");
 	}
@@ -363,6 +366,10 @@ int main(int argc, char * argv[])
 	adc_configure();
 	nrf_temp_init();
 	twi_init();
+
+//	sgp40_set_temp_hum_bme280(25 * 100, 50 * 1024 + 2);
+//	sgp40_set_temp_hum_bme280(130 * 100, 100 * 1024);
+//	sgp40_set_temp_hum_bme280(-45 * 100, 0 * 1024);
 
 	bme280_sensor_init(bme280_results_handler, &m_twi_master, BME280_SENSOR_I2C_ADDR);
 	max44009_sensor_init(max44009_results_handler, &m_twi_master, MAX44009_SENSOR_I2C_ADDR);

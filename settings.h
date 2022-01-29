@@ -32,6 +32,8 @@
 #define SGP40_SENSOR_I2C_ADDR                0x59
 #define BME280_SENSOR_I2C_ADDR               BME280_I2C_ADDR_SEC
 
+#define DISABLE_SGP40_TEMP_HUM_COMPENSATION  1
+
 #define DISABLE_OT_ROLE_LIGHTS               1
 // #define DISABLE_OT_TRAFFIC_LIGHTS            1
 
