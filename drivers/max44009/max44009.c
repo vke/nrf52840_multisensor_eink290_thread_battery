@@ -10,6 +10,16 @@ static nrf_drv_twi_t const *p_sensor_twi_instance = NULL;
 static uint8_t max44009_sensor_addr = 0;
 static bool max44009_sensor_initialized = false;
 
+#define MAX44009_REG_ADDR_CONFIG          0x02
+#define MAX44009_REG_ADDR_LUX_HIGH        0x03
+#define MAX44009_REG_ADDR_LUX_LOW         0x04
+
+#define MAX44009_CONFIG_CONTINIOUS        0x80
+
+#define MAX44009_MAX_SENSOR_VALUE         0x3FC000
+
+#define MAX44009_EXPONENT_OVERFLOW        15
+
 
 static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
 {
@@ -27,8 +37,8 @@ static int8_t user_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, v
 ret_code_t max44009_configure()
 {
 	uint8_t config_data[2];
-	config_data[0] = 0x02; // max44009 sensor configuration register address
-	config_data[1] = 0x80; // continious mode bit for configuration register
+	config_data[0] = MAX44009_REG_ADDR_CONFIG; // max44009 sensor configuration register address
+	config_data[1] = MAX44009_CONFIG_CONTINIOUS; // continious mode bit for configuration register
 
 	ret_code_t err_code = nrf_drv_twi_tx(p_sensor_twi_instance, max44009_sensor_addr, config_data, sizeof(config_data), false);
 	APP_ERROR_CHECK(err_code);
@@ -46,12 +56,12 @@ ret_code_t max44009_start_measurement()
 	uint8_t data[2];
 
 	// FIXME: should be called in single transation without STOP
-	uint8_t i2c_result1 = user_i2c_read(0x03, data, 1, &max44009_sensor_addr);
+	uint8_t i2c_result1 = user_i2c_read(MAX44009_REG_ADDR_LUX_HIGH, data, 1, &max44009_sensor_addr);
 	if (i2c_result1) {
 		results_handler(NULL);
 		return NRF_ERROR_INTERNAL;
 	}
-	uint8_t i2c_result2 = user_i2c_read(0x04, data + 1, 1, &max44009_sensor_addr);
+	uint8_t i2c_result2 = user_i2c_read(MAX44009_REG_ADDR_LUX_LOW, data + 1, 1, &max44009_sensor_addr);
 	if (i2c_result2) {
 		results_handler(NULL);
 		return NRF_ERROR_INTERNAL;
@@ -60,8 +70,8 @@ ret_code_t max44009_start_measurement()
 	uint8_t exponent = (data[0] >> 4) & 0x0F;
 	uint32_t mantissa = ((data[0] & 0x0F) << 4) + (data[1] & 0x0F);
 	max44009_results_t results;
-	results.lux = 0x3FC000; // max sensor value - 188K
-	if (exponent != 15)
+	results.lux = MAX44009_MAX_SENSOR_VALUE; // max sensor value - 188K
+	if (exponent != MAX44009_EXPONENT_OVERFLOW)
 		results.lux = mantissa << exponent;
 	results_handler(&results);
 
