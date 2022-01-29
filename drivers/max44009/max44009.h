@@ -8,7 +8,7 @@ typedef struct
 
 typedef void (*max44009_results_handler_t)(max44009_results_t *p_results);
 
-int max44009_start_measurement();
-int max44009_sensor_init(max44009_results_handler_t handler, nrf_drv_twi_t const *instance, uint8_t addr);
+ret_code_t max44009_start_measurement();
+ret_code_t max44009_sensor_init(max44009_results_handler_t handler, nrf_drv_twi_t const *instance, uint8_t addr);
 
 #endif // _MAX44009_H__
