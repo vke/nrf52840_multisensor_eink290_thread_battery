@@ -207,14 +207,28 @@ bool eink290_fill_test_pattern() {
 	return eink290_send_command_data(EINK290_WRITE_RAM, eink290_framebuffer, sizeof(eink290_framebuffer));
 }
 
-bool eink290_display_frame_mode1(void)
+bool eink290_display_frame_mode1()
 {
 	if (!eink290_send_command_and_byte(EINK290_DISPLAY_UPDATE_CONTROL_2, EINK290_DUC2_DISPLAY_MODE_1))
 		return false;
-	
+
 	if (!eink290_send_command_data(EINK290_MASTER_ACTIVATION, NULL, 0))
 		return false;
-	
+
+	if (!eink290_busy_wait(5000))
+		return false;
+
+	return true;
+}
+
+bool eink290_display_frame_mode2()
+{
+	if (!eink290_send_command_and_byte(EINK290_DISPLAY_UPDATE_CONTROL_2, EINK290_DUC2_DISPLAY_MODE_2))
+		return false;
+
+	if (!eink290_send_command_data(EINK290_MASTER_ACTIVATION, NULL, 0))
+		return false;
+
 	if (!eink290_busy_wait(5000))
 		return false;
 
