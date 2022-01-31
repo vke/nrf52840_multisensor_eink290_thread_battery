@@ -128,6 +128,7 @@ void saadc_event_handler(nrf_drv_saadc_evt_t const *p_event)
 		APP_ERROR_CHECK(err_code);
 
 		app_sched_event_put(NULL, 0, update_voltage_attributes_callback);
+	} else if (p_event->type == NRF_DRV_SAADC_EVT_CALIBRATEDONE) {
 	}
 	else
 	{
