@@ -50,3 +50,30 @@ Right external (up to down):
 08, P0.29 = MAX44009 INT
 09, P0.31 = DC_PIN (eink)
 10, P0.30 = BUZZER
+
+eink connector:
+Pin # Single Description Remark
+ 1  NC    No connection and do not connect with other NC pins Keep Open
+ 2  GDR   N-Channel MOSFET Gate Drive Control
+ 3  RESE  Current Sense Input for the Control Loop
+ 4  NC    No connection and do not connect with other NC pins e Keep Open
+ 5  VSH2  This pin is Positive Source driving voltage
+ 6  TSCL  I2C Interface to digital temperature sensor Clock pin
+ 7  TSDA  I2C Interface to digital temperature sensor Date pin
+ 8  BS1   Bus selection pin. This pin (BS1) is for 3-line SPI or 4-line SPI selection. When it is “Low”, 4-line SPI is selected. When it is “High”, 3-line SPI (9 bits SPI) is selected.
+ 9  BUSY  Busy state output pin. This pin (BUSY) is Busy state output pin. When Busy is High the operation of chip should not be interrupted and any commands should not be issued to the module. The driver IC will put Busy pin High when the driver IC is working such as: - Outputting display waveform; or - Communicating with digital temperature sensor
+10  RES#  Reset. his pin (RES#) is reset signal input. The Reset is active low.
+11  D/C#  Data/Command control pin. This pin (D/C#) is Data/Command control pin connecting to the MCU. When the pin is pulled HIGH, the data will be interpreted as data. When the pin is pulled LOW, the data will be interpreted as command.
+12  CS#   Chip Select input pin. This pin (CS#) is the chip select input connecting to the MCU. The chip is enabled for MCU communication: only when CS# is pulled LOW.
+13  SCL   serial clock pin (SPI)
+14  SDA   serial data pin (SPI)
+15  VDDIO Power for interface logic pins
+16  VCI   Power Supply pin for the chip
+17  VSS   Ground
+18  VDD   Core logic power pin
+19  VPP   Power Supply for OTP Programming
+20  VSH1  This pin is Positive Source driving voltage
+21  VGH   This pin is Positive Gate driving voltage
+22  VSL   This pin is Negative Source driving voltage
+23  VGL   This pin is Negative Gate driving voltage
+24  VCOM  These pins are VCOM driving voltage
