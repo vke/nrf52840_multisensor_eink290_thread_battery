@@ -28,6 +28,14 @@
 #define TWI_SCL_M                            3
 #define TWI_SDA_M                            28
 
+#define EINK290_SPI_CS_PIN                   22
+#define EINK290_SPI_MISO_PIN                 NRF_DRV_SPI_PIN_NOT_USED
+#define EINK290_SPI_MOSI_PIN                 15
+#define EINK290_SPI_SCK_PIN                  20
+#define EINK290_DC_PIN                       31
+#define EINK290_RST_PIN                      17
+#define EINK290_BUSY_PIN                     13
+
 #define MAX44009_SENSOR_I2C_ADDR             0x4A
 #define SGP40_SENSOR_I2C_ADDR                0x59
 #define BME280_SENSOR_I2C_ADDR               BME280_I2C_ADDR_SEC

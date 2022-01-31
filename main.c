@@ -61,6 +61,7 @@
 #include "drivers/max44009/max44009.h"
 #include "drivers/sgp40/sgp40.h"
 #include "drivers/bme280/bme280nrf52.h"
+#include "drivers/eink290/eink290.h"
 
 #include <openthread/thread.h>
 
@@ -361,47 +362,42 @@ void sgp40_results_handler(sgp40_results_t* p_results)
 
 int main(int argc, char * argv[])
 {
+	ret_code_t error_code = NRF_SUCCESS;
+
 	log_init();
+
+	error_code = nrf_drv_power_init(NULL);
+	APP_ERROR_CHECK(error_code);
+
 	APP_SCHED_INIT(SCHED_EVENT_DATA_SIZE, SCHED_QUEUE_SIZE);
 	timer_init();
 	adc_configure();
 	nrf_temp_init();
 	twi_init();
 
-//	sgp40_set_temp_hum_bme280(25 * 100, 50 * 1024 + 2);
-//	sgp40_set_temp_hum_bme280(130 * 100, 100 * 1024);
-//	sgp40_set_temp_hum_bme280(-45 * 100, 0 * 1024);
-
 	bme280_sensor_init(bme280_results_handler, &m_twi_master, BME280_SENSOR_I2C_ADDR);
 	max44009_sensor_init(max44009_results_handler, &m_twi_master, MAX44009_SENSOR_I2C_ADDR);
 	sgp40_sensor_init(sgp40_results_handler, &m_twi_master, SGP40_SENSOR_I2C_ADDR);
 
-	uint32_t error_code = NRF_SUCCESS;
-
-	error_code = nrf_drv_power_init(NULL);
-	APP_ERROR_CHECK(error_code);
+	ret_code_t init_error = eink290_init();
+	bool test_done = eink290_test();
 
 	error_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
 	APP_ERROR_CHECK(error_code);
 
 	thread_instance_init();
 
-	//NRF_LOG_INFO("sgp40: turning heater off");
-	//sgp4x_turn_heater_off();
-	//nrf_delay_ms(120000);
-	//NRF_LOG_INFO("sgp40: starting measurements");
-
 	otPlatRadioSetTransmitPower(thread_ot_instance_get(), RADIO_TRANSMIT_POWER);
 	thread_coap_utils_init();
 
-	ret_code_t err_code = app_timer_start(m_voltage_timer_id, APP_TIMER_TICKS(VOLTAGE_TIMER_INTERVAL / ADC_SAMPLES_PER_CHANNEL), NULL);
-	APP_ERROR_CHECK(err_code);
+	error_code = app_timer_start(m_voltage_timer_id, APP_TIMER_TICKS(VOLTAGE_TIMER_INTERVAL / ADC_SAMPLES_PER_CHANNEL), NULL);
+	APP_ERROR_CHECK(error_code);
 
-	err_code = app_timer_start(m_internal_temperature_timer_id, APP_TIMER_TICKS(INTERNAL_TEMPERATURE_TIMER_INTERVAL), NULL);
-	APP_ERROR_CHECK(err_code);
+	error_code = app_timer_start(m_internal_temperature_timer_id, APP_TIMER_TICKS(INTERNAL_TEMPERATURE_TIMER_INTERVAL), NULL);
+	APP_ERROR_CHECK(error_code);
 
-	err_code = app_timer_start(m_sensors_timer_id, APP_TIMER_TICKS(SENSORS_TIMER_INTERVAL), NULL);
-	APP_ERROR_CHECK(err_code);
+	error_code = app_timer_start(m_sensors_timer_id, APP_TIMER_TICKS(SENSORS_TIMER_INTERVAL), NULL);
+	APP_ERROR_CHECK(error_code);
 
 	while (true) {
 		thread_process();

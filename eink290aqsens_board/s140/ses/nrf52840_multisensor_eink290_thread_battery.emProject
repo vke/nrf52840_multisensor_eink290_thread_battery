@@ -80,6 +80,9 @@
     </folder>
     <folder Name="nRF_Drivers">
       <file file_name="$(PATH_TO_SDK)/integration/nrfx/legacy/nrf_drv_twi.c" />
+      <file file_name="$(PATH_TO_SDK)/integration/nrfx/legacy/nrf_drv_spi.c" />
+      <file file_name="$(PATH_TO_SDK)/modules/nrfx/drivers/src/nrfx_spi.c" />
+      <file file_name="$(PATH_TO_SDK)/modules/nrfx/drivers/src/nrfx_spim.c" />
       <file file_name="$(PATH_TO_SDK)/integration/nrfx/legacy/nrf_drv_clock.c" />
       <file file_name="$(PATH_TO_SDK)/integration/nrfx/legacy/nrf_drv_power.c" />
       <file file_name="$(PATH_TO_SDK)/components/drivers_nrf/nrf_soc_nosd/nrf_nvic.c" />
@@ -122,6 +125,10 @@
         <folder Name="sgp40">
           <file file_name="../../../drivers/sgp40/sgp40.c" />
           <file file_name="../../../drivers/sgp40/sgp40.h" />
+        </folder>
+        <folder Name="eink290">
+          <file file_name="../../../drivers/eink290/eink290.c" />
+          <file file_name="../../../drivers/eink290/eink290.h" />
         </folder>
       </folder>
       <file file_name="../config/app_config.h" />
