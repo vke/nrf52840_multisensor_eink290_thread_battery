@@ -380,7 +380,6 @@ int main(int argc, char * argv[])
 	sgp40_sensor_init(sgp40_results_handler, &m_twi_master, SGP40_SENSOR_I2C_ADDR);
 
 	ret_code_t init_error = eink290_hw_init();
-	bool test_done = eink290_test();
 
 	error_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
 	APP_ERROR_CHECK(error_code);

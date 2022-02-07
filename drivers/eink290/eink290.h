@@ -21,17 +21,17 @@
 #define EINK290_DUC1_SOURCE_OUTPUT_0_175            0
 #define EINK290_DUC1_SOURCE_OUTPUT_8_167            1
 
-#define EINK290_DUC2_DISABLE_CLOCK                  0x01
-#define EINK290_DUC2_DISABLE_ANALOG                 0x02
-#define EINK290_DUC2_DISPLAY_PATTERN                0x04
-#define EINK290_DUC2_DISPLAY_INITIAL                0x08
-#define EINK290_DUC2_LOAD_LUT                       0x10
-#define EINK290_DUC2_LOAD_TEMPERATURE               0x20
-#define EINK290_DUC2_ENABLE_ANALOG                  0x40
-#define EINK290_DUC2_ENABLE_CLOCK                   0x80
+#define EINK290_DUC2_DISABLE_CLOCK                  0x01 // Disable clock signal
+#define EINK290_DUC2_DISABLE_ANALOG                 0x02 // Disable analog
+#define EINK290_DUC2_UPDATE_EINK_PANEL              0x04 // Display panel according to display mode selection
+#define EINK290_DUC2_PARTIAL_UPDATE                 0x08 // Select display mode in OTP, while 0 for display mode1, 1 for display mode2
+#define EINK290_DUC2_LOAD_LUT                       0x10 // Load LUT according to display mode selection
+#define EINK290_DUC2_LOAD_TEMPERATURE               0x20 // Load TS value by I2C single master interface
+#define EINK290_DUC2_ENABLE_ANALOG                  0x40 // Enable analog HV
+#define EINK290_DUC2_ENABLE_CLOCK                   0x80 // Enable clock signal
 
-#define EINK290_DUC2_DISPLAY_MODE_1                 (EINK290_DUC2_DISABLE_CLOCK | EINK290_DUC2_DISABLE_ANALOG | EINK290_DUC2_DISPLAY_PATTERN | EINK290_DUC2_LOAD_LUT | EINK290_DUC2_LOAD_TEMPERATURE | EINK290_DUC2_ENABLE_ANALOG | EINK290_DUC2_ENABLE_CLOCK)
-#define EINK290_DUC2_DISPLAY_MODE_2                 (EINK290_DUC2_DISABLE_CLOCK | EINK290_DUC2_DISABLE_ANALOG | EINK290_DUC2_DISPLAY_PATTERN | EINK290_DUC2_DISPLAY_INITIAL | EINK290_DUC2_LOAD_LUT | EINK290_DUC2_LOAD_TEMPERATURE | EINK290_DUC2_ENABLE_ANALOG | EINK290_DUC2_ENABLE_CLOCK)
+#define EINK290_DUC2_DISPLAY_MODE_1                 (EINK290_DUC2_DISABLE_CLOCK | EINK290_DUC2_DISABLE_ANALOG | EINK290_DUC2_UPDATE_EINK_PANEL | EINK290_DUC2_LOAD_LUT | EINK290_DUC2_LOAD_TEMPERATURE | EINK290_DUC2_ENABLE_ANALOG | EINK290_DUC2_ENABLE_CLOCK)
+#define EINK290_DUC2_DISPLAY_MODE_2                 (EINK290_DUC2_DISABLE_CLOCK | EINK290_DUC2_DISABLE_ANALOG | EINK290_DUC2_UPDATE_EINK_PANEL | EINK290_DUC2_PARTIAL_UPDATE | EINK290_DUC2_LOAD_LUT | EINK290_DUC2_LOAD_TEMPERATURE | EINK290_DUC2_ENABLE_ANALOG | EINK290_DUC2_ENABLE_CLOCK)
 
 // 0 = vss_dcvcom, 1 = vsh1_vsh1_dcvcom, 2 = vsl_vsl_dcvcom, 3 = vsh2_na
 #define EINK290_LUT_VS_VSS                          0b00
@@ -49,13 +49,15 @@
 #define EINK290_MASTER_ACTIVATION                   0x20
 #define EINK290_DISPLAY_UPDATE_CONTROL_1            0x21
 #define EINK290_DISPLAY_UPDATE_CONTROL_2            0x22
-#define EINK290_WRITE_RAM                           0x24
+#define EINK290_WRITE_RAM_BW                        0x24
+#define EINK290_WRITE_RAM_RED                       0x26
 #define EINK290_WRITE_LUT                           0x32
 #define EINK290_DISPLAY_OPTION                      0x37
 #define EINK290_BORDER_WAVEFORM_CONTROL             0x3C
 #define EINK290_SET_RAM_X_WINDOW                    0x44
 #define EINK290_SET_RAM_Y_WINDOW                    0x45
-#define EINK290_CLEAR_AREA                          0x47
+#define EINK290_CLEAR_AREA_RED                      0x46
+#define EINK290_CLEAR_AREA_BW                       0x47
 #define EINK290_SET_RAM_X_ADDRESS_CURSOR            0x4E
 #define EINK290_SET_RAM_Y_ADDRESS_CURSOR            0x4F
 
@@ -312,11 +314,18 @@ typedef struct {
 	uint8_t vcom; // 158
 } eink290_ws_t;
 
+#define EINK290_FRAMEBUFFER_PARTIAL_CHECKSUM_COUNT   16
+
+typedef struct {
+	uint32_t full_crc32;
+	uint32_t partitions_crc32[EINK290_FRAMEBUFFER_PARTIAL_CHECKSUM_COUNT];
+} eink290_framebuffer_crc_t;
+
 #pragma pack(pop)
 
 bool eink290_deep_sleep(uint8_t mode);
-bool eink290_test();
 bool eink290_initialize();
+bool eink290_get_framebuffer_crc(eink290_framebuffer_crc_t *p_crc);
 ret_code_t eink290_hw_init();
 
 #endif // _EINK290_H__
